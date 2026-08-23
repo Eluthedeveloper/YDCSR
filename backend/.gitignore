@@ -4,4 +4,4 @@ uploads/
 .env
 *.log
 ydcsdata.csv
-AGENTS.md
+/scripts
