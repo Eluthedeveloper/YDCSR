@@ -1,0 +1,7 @@
+node_modules/
+dist/
+uploads/
+.env
+*.log
+ydcsdata.csv
+AGENTS.md
