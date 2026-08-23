@@ -43,20 +43,30 @@ export class AuthService {
     const ipAddress = context?.ipAddress || null;
     const loginLoggingPaused = await settingsService.isLoginLoggingPaused();
     if (!loginLoggingPaused) {
-      const geo = await resolveGeo(context?.ipAddress);
+      const auditLogId = generateUUID();
       await db.insert(auditLogs).values({
-        id: generateUUID(),
+        id: auditLogId,
         userId: user.id,
         action: 'LOGIN',
         entity: 'Auth',
         entityId: user.id,
         details: JSON.stringify({ method: 'POST', path: '/api/auth/login', username: user.username }),
         ipAddress,
-        country: geo?.country ?? null,
-        countryCode: geo?.countryCode ?? null,
-        city: geo?.city ?? null,
+        country: null,
+        countryCode: null,
+        city: null,
         userAgent: context?.userAgent || null,
       });
+      // Geo lookup calls an external API, so enrich the row in the background
+      // rather than delaying the login response.
+      void resolveGeo(context?.ipAddress)
+        .then((geo) => {
+          if (!geo?.country) return;
+          return db.update(auditLogs)
+            .set({ country: geo.country, countryCode: geo.countryCode, city: geo.city })
+            .where(eq(auditLogs.id, auditLogId));
+        })
+        .catch(() => {});
     }
 
     let regionalStateName: string | null = null;

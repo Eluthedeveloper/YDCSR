@@ -203,12 +203,17 @@ export class GroupService {
     agreementMade: number;
     remark: string;
     status: GroupStatus;
-  }>, requester?: { userId: string; role: UserRole }) {
+  }>, requester?: RequesterScope) {
     const db = getDb();
     const [group] = await db.select().from(radioHomeGroups).where(eq(radioHomeGroups.id, id)).limit(1);
     if (!group) throw new AppError('Group not found', 404);
-    if (requester?.role === 'data_entry' && group.createdBy !== requester.userId) {
-      throw new AppError('You can only edit records you entered', 403);
+
+    const selfScoped = this.isSelfScoped(requester);
+    if (selfScoped) {
+      if (!requester!.regionalStateId) throw new AppError('Your account has no regional state assigned', 403);
+      if (group.createdBy !== requester!.userId) {
+        throw new AppError('You can only edit records you entered', 403);
+      }
     }
 
     const updateData: Record<string, unknown> = {};
@@ -217,14 +222,26 @@ export class GroupService {
 
     if (data.dateStarted !== undefined) updateData.dateStarted = data.dateStarted ? parseDate(data.dateStarted) : null;
     if (data.regionId || data.regionalStateId) {
+      let targetStateId = data.regionalStateId || '';
+      if (selfScoped) {
+        targetStateId = requester!.regionalStateId!;
+        data.regionName = undefined;
+        if (data.regionId) {
+          const [r] = await db.select({ id: regions.id, regionalStateId: regions.regionalStateId })
+            .from(regions).where(eq(regions.id, data.regionId)).limit(1);
+          if (!r || !r.regionalStateId || r.regionalStateId !== targetStateId) {
+            throw new AppError('You can only use regions within your assigned regional state', 403);
+          }
+        }
+      }
       let regionId = data.regionId || '';
       if (!regionId) {
         if (data.regionName) {
-          const region = await this.findOrCreateRegion(data.regionName, data.regionalStateId!);
+          const region = await this.findOrCreateRegion(data.regionName, targetStateId);
           regionId = region.id;
         } else {
           const [firstRegion] = await db.select({ id: regions.id }).from(regions)
-            .where(and(eq(regions.regionalStateId, data.regionalStateId!), eq(regions.status, 'active')))
+            .where(and(eq(regions.regionalStateId, targetStateId), eq(regions.status, 'active')))
             .limit(1);
           regionId = firstRegion?.id || '';
         }
