@@ -10,19 +10,47 @@ export interface GeoInfo {
 const GEO_CACHE_TTL = 24 * 60 * 60 * 1000;
 const cache = new Map<string, { value: GeoInfo; expiresAt: number }>();
 
-const LOCAL_IPS = new Set(['127.0.0.1', '::1']);
+const LOCAL_IPS = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+
+function isPublicIpv4(ip: string): boolean {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(ip);
+  if (!m) return false;
+  const parts = m.slice(1).map(Number);
+  if (parts.some((n) => n > 255)) return false;
+  const [a, b, c] = parts;
+  if (a === 0 || a === 255) return false;
+  if (a >= 224) return false;
+  if (a === 10) return false;
+  if (a === 127) return false;
+  if (a === 169 && b === 254) return false;
+  if (a === 172 && b >= 16 && b <= 31) return false;
+  if (a === 192 && b === 168) return false;
+  if (a === 100 && b >= 64 && b <= 127) return false;
+  return true;
+}
 
 export function getClientIp(req: Request): string {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.length > 0) {
-    const first = forwarded.split(',')[0].trim();
-    if (first) return first.replace(/^::ffff:/, '');
+  // Cloudflare terminates the public connection and carries the real visitor IP
+  // in CF-Connecting-IP. Without it, req.ip resolves to a Cloudflare edge
+  // (Anycast) address and the geo lookup logs the datacenter location (e.g.
+  // Marseille, Djibouti) instead of the actual visitor.
+  const cfIp = req.headers['cf-connecting-ip'];
+  if (typeof cfIp === 'string' && isPublicIpv4(cfIp.trim())) {
+    return cfIp.trim().replace(/^::ffff:/, '');
   }
-  if (Array.isArray(forwarded) && forwarded.length > 0) {
-    const first = forwarded[0].split(',')[0].trim();
-    if (first) return first.replace(/^::ffff:/, '');
+  // The app sets `trust proxy = 1`, so Express already resolves the real client
+  // IP from the right-most (proxy-trusted) X-Forwarded-For hop. Reading the
+  // first XFF value instead would let a direct client spoof its address.
+  let ip = (req.ip || req.socket.remoteAddress || '').replace(/^::ffff:/, '');
+  // Only when the request arrived over loopback (cPanel proxy terminating on
+  // the same host) fall back to the final XFF entry added by that proxy.
+  if (LOCAL_IPS.has(ip) && req.headers['x-forwarded-for']) {
+    const raw = req.headers['x-forwarded-for'];
+    const chain = (Array.isArray(raw) ? raw : [raw]).join(',').split(',');
+    const last = chain[chain.length - 1]?.trim();
+    if (last) ip = last.replace(/^::ffff:/, '');
   }
-  return (req.ip || '').replace(/^::ffff:/, '');
+  return ip;
 }
 
 function isPrivateIp(ip: string): boolean {

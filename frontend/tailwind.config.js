@@ -5,7 +5,6 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Matches yemisrachdimts.elacodes.com brand indigo (#4c6ef5)
         primary: {
           50: '#edf2ff',
           100: '#dbe4ff',

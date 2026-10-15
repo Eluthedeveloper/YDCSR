@@ -50,9 +50,7 @@ export default function LoginPage() {
       {/* Brand panel - desktop only */}
       <div className="hidden lg:flex flex-col justify-between flex-1 p-16 xl:p-24 relative z-10">
         <div className="flex items-center gap-3">
-          <div className="bg-white dark:bg-gray-800 p-2.5 rounded-2xl shadow-md ring-1 ring-black/5 dark:ring-white/10">
-            <Logo size={44} />
-          </div>
+          <Logo size={96} />
           <span className="text-sm font-bold tracking-widest uppercase text-gray-500 dark:text-gray-400">User Portal</span>
         </div>
 
@@ -76,11 +74,8 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           {/* Brand header - mobile only */}
           <div className="lg:hidden text-center mb-8">
-            <div className="inline-flex relative mb-5">
-              <span className="absolute inset-0 rounded-3xl animate-ping bg-primary-300/30 pointer-events-none" style={{ animationDuration: '3s' }} />
-              <div className="bg-white dark:bg-gray-800 p-2.5 rounded-3xl shadow-xl ring-1 ring-black/5 dark:ring-white/10 relative">
-                <Logo size={64} />
-              </div>
+            <div className="inline-block mb-5">
+              <Logo size={128} />
             </div>
             <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white leading-tight">
               Yemisrach Dimts<br />Communication Service

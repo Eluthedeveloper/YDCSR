@@ -6,6 +6,9 @@ import { generateUUID } from '../utils/helpers';
 import { getClientIp, resolveGeo } from '../utils/geo';
 
 const SENSITIVE_KEYS = ['password', 'currentPassword', 'newPassword', 'refreshToken', 'accessToken'];
+// Bound audit row size: request bodies can be up to 10 MB, but only a small
+// summary belongs in the log.
+const DETAILS_MAX_LENGTH = 2000;
 
 function redact(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(redact);
@@ -36,7 +39,7 @@ export function audit(action: string, entity: string) {
             action,
             entity,
             entityId: entityId as string | null | undefined,
-            details: JSON.stringify({ method: req.method, path: req.path, body: redact(req.body) }),
+            details: JSON.stringify({ method: req.method, path: req.path, body: redact(req.body) }).slice(0, DETAILS_MAX_LENGTH),
             ipAddress,
             country: geo?.country ?? null,
             countryCode: geo?.countryCode ?? null,

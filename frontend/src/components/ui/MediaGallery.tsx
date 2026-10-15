@@ -222,7 +222,7 @@ export default function MediaGallery({ items, onDelete, onEdit, readOnly }: Medi
             </div>
 
             {(canDeleteItem(item) || canEditItem(item)) && (
-              <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute top-2 right-2 flex gap-1.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                 {canEditItem(item) && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onEdit?.(item); }}
@@ -272,7 +272,7 @@ export default function MediaGallery({ items, onDelete, onEdit, readOnly }: Medi
           {(() => {
             const item = filtered[lightboxIndex];
             return (
-              <div className="w-full max-w-4xl mt-10" onClick={(e) => e.stopPropagation()}>
+              <div className="w-full max-w-4xl my-12 sm:my-10" onClick={(e) => e.stopPropagation()}>
                 {item.type === 'photo' ? (
                   getDriveFileId(item.url) ? (
                     <DriveImage
@@ -319,19 +319,21 @@ export default function MediaGallery({ items, onDelete, onEdit, readOnly }: Medi
           {lightboxIndex > 0 && (
             <button
               onClick={(e) => { e.stopPropagation(); setLightboxIndex(lightboxIndex - 1); }}
-              className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-colors"
+              className="absolute left-1 sm:left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-colors"
               title="Previous (←)"
             >
-              <ChevronLeft size={40} />
+              <ChevronLeft size={28} className="sm:hidden" />
+              <ChevronLeft size={40} className="hidden sm:block" />
             </button>
           )}
           {lightboxIndex < filtered.length - 1 && (
             <button
               onClick={(e) => { e.stopPropagation(); setLightboxIndex(lightboxIndex + 1); }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-colors"
+              className="absolute right-1 sm:right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-colors"
               title="Next (→)"
             >
-              <ChevronRight size={40} />
+              <ChevronRight size={28} className="sm:hidden" />
+              <ChevronRight size={40} className="hidden sm:block" />
             </button>
           )}
         </div>

@@ -6,6 +6,11 @@ export class DashboardController {
   async stats(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const stats = await dashboardService.getStats();
+      // Viewers count is admin-only; strip it for every other role
+      if (req.user?.role !== 'admin') {
+        const { totalViewers, ...rest } = stats;
+        return res.json({ success: true, data: rest });
+      }
       return res.json({ success: true, data: stats });
     } catch (error) {
       next(error);

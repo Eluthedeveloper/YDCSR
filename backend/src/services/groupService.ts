@@ -104,7 +104,6 @@ export class GroupService {
           data.regionId = undefined;
         }
       }
-      data.regionName = undefined;
       data.regionalStateId = scopedStateId;
     }
 
@@ -152,10 +151,10 @@ export class GroupService {
     const female = data.femaleMembers || 0;
 
     const phone = (data.groupLeaderPhone || '').trim();
-    const normalizedPhone = this.normalizePhone(phone);
+    const normalizedPhone = this.normalizePhone(phone) || null;
     if (normalizedPhone) {
       const [dup] = await db.select({ id: radioHomeGroups.id }).from(radioHomeGroups)
-        .where(this.phoneNormalizedCondition(radioHomeGroups.groupLeaderPhone, normalizedPhone)).limit(1);
+        .where(eq(radioHomeGroups.groupLeaderPhoneNorm, normalizedPhone)).limit(1);
       if (dup) throw new AppError('Group leader phone number is already in use', 400);
     }
 
@@ -170,6 +169,7 @@ export class GroupService {
       churchId: church.id,
       groupLeaderName: data.groupLeaderName,
       groupLeaderPhone: phone || null,
+      groupLeaderPhoneNorm: normalizedPhone,
       facilitatorName: data.facilitatorName,
       facilitatorPhone: data.facilitatorPhone,
       maleMembers: male,
@@ -225,7 +225,6 @@ export class GroupService {
       let targetStateId = data.regionalStateId || '';
       if (selfScoped) {
         targetStateId = requester!.regionalStateId!;
-        data.regionName = undefined;
         if (data.regionId) {
           const [r] = await db.select({ id: regions.id, regionalStateId: regions.regionalStateId })
             .from(regions).where(eq(regions.id, data.regionId)).limit(1);
@@ -268,12 +267,14 @@ export class GroupService {
       }
     }
     if (data.groupLeaderName !== undefined) updateData.groupLeaderName = nullableStr(data.groupLeaderName);
-    if (data.groupLeaderPhone !== undefined) updateData.groupLeaderPhone = nullableStr(data.groupLeaderPhone);
-    if (data.groupLeaderPhone !== undefined && data.groupLeaderPhone.trim()) {
-      const normalizedPhone = this.normalizePhone(data.groupLeaderPhone);
+    if (data.groupLeaderPhone !== undefined) {
+      updateData.groupLeaderPhone = nullableStr(data.groupLeaderPhone);
+      const phoneToCheck = (data.groupLeaderPhone || '').trim();
+      const normalizedPhone = this.normalizePhone(phoneToCheck) || null;
+      updateData.groupLeaderPhoneNorm = normalizedPhone;
       if (normalizedPhone) {
         const [dup] = await db.select({ id: radioHomeGroups.id }).from(radioHomeGroups)
-          .where(and(this.phoneNormalizedCondition(radioHomeGroups.groupLeaderPhone, normalizedPhone), ne(radioHomeGroups.id, id))).limit(1);
+          .where(and(eq(radioHomeGroups.groupLeaderPhoneNorm, normalizedPhone), ne(radioHomeGroups.id, id))).limit(1);
         if (dup) throw new AppError('Group leader phone number is already in use', 400);
       }
     }
@@ -439,9 +440,9 @@ export class GroupService {
   async getAll(requester?: RequesterScope | null) {
     const query = this.baseQuery();
     if (this.isSelfScoped(requester)) {
-      return query.where(this.scopeCondition(requester)).orderBy(sql`${radioHomeGroups.createdAt} DESC`);
+      return query.where(this.scopeCondition(requester)).orderBy(sql`${radioHomeGroups.createdAt} DESC`).limit(10000);
     }
-    return query.orderBy(sql`${radioHomeGroups.createdAt} DESC`);
+    return query.orderBy(sql`${radioHomeGroups.createdAt} DESC`).limit(10000);
   }
 
   private normalizeKey(key: string): string {
@@ -472,10 +473,6 @@ export class GroupService {
 
   private normalizePhone(value: string): string {
     return String(value || '').replace(/\D/g, '').replace(/^0+/, '');
-  }
-
-  private phoneNormalizedCondition(column: any, normalized: string) {
-    return sql`REGEXP_REPLACE(REGEXP_REPLACE(${column}, '[^0-9]', ''), '^0+', '') = ${normalized}`;
   }
 
   private normalizeStateName(name: string): string {
@@ -633,6 +630,7 @@ export class GroupService {
           churchId,
           groupLeaderName: leaderName || null,
           groupLeaderPhone: leaderPhone || null,
+          groupLeaderPhoneNorm: leaderPhone ? (this.normalizePhone(leaderPhone) || null) : null,
           facilitatorName: facilitatorName || null,
           facilitatorPhone: facilitatorPhone || null,
           maleMembers: male,

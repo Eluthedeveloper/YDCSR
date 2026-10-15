@@ -34,7 +34,8 @@ const SIGNATURES: Record<string, (buf: Buffer) => boolean> = {
 // (HTML/scripts) could be stored under an allowed image/video/pdf name.
 export function verifyFileSignature(filePath: string, mime: string): boolean {
   const check = SIGNATURES[mime];
-  if (!check) return true;
+  // Whitelist-then-fail: an unrecognised declared type must not pass.
+  if (!check) return false;
   try {
     const buf = Buffer.alloc(16);
     const fd = fs.openSync(filePath, 'r');

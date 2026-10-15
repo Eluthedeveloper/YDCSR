@@ -68,15 +68,22 @@ export class ReportController {
         reportDate = new Date(year, month - 1, 1).toISOString();
       }
 
-      const item = await reportService.create({
-        title,
-        fileName: req.file.filename,
-        originalName: req.file.originalname,
-        fileSize: req.file.size,
-        mimeType: req.file.mimetype,
-        reportDate,
-        createdBy: req.user!.userId,
-      });
+      let item;
+      try {
+        item = await reportService.create({
+          title,
+          fileName: req.file.filename,
+          originalName: req.file.originalname,
+          fileSize: req.file.size,
+          mimeType: req.file.mimetype,
+          reportDate,
+          createdBy: req.user!.userId,
+        });
+      } catch (error) {
+        // Never leave an orphaned file on disk when the DB row fails to save.
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        throw error;
+      }
 
       return res.status(201).json({ success: true, message: 'Report posted', data: item });
     } catch (error) {

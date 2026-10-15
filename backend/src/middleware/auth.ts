@@ -1,18 +1,41 @@
 import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { eq } from 'drizzle-orm';
 import { config } from '../config';
+import { getDb } from '../db/connection';
+import { users } from '../db/schema';
 import { AuthRequest, JwtPayload, UserRole } from '../types';
 import { logger } from '../utils/logger';
 
-export function authenticate(req: AuthRequest, res: Response, next: NextFunction) {
+export async function authenticate(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    let token =
+      typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
+        ? authHeader.split(' ')[1]
+        : undefined;
+
+    // Fall back to the httpOnly access_token cookie set on login/refresh.
+    if (!token && req.cookies?.access_token) {
+      token = req.cookies.access_token;
+    }
+
+    if (!token) {
       return res.status(401).json({ success: false, message: 'Access token required' });
     }
 
-    const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, config.jwt.secret) as JwtPayload;
+
+    const db = getDb();
+    const [user] = await db.select({ status: users.status, tokenVersion: users.tokenVersion })
+      .from(users)
+      .where(eq(users.id, decoded.userId))
+      .limit(1);
+
+    if (!user || user.status !== 'active' || user.tokenVersion !== decoded.tokenVersion) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+    }
+
     req.user = decoded;
     next();
   } catch (error) {

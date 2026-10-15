@@ -168,6 +168,7 @@ export interface ApiResponse<T = unknown> {
 export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
+  csrfToken: string;
   user: {
     id: string;
     fullName: string;

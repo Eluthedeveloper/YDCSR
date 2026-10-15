@@ -125,7 +125,7 @@ export default function EthiopiaMap({ stats, loading }: EthiopiaMapProps) {
           })}
         </svg>
 
-        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5">
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
           {ETHIOPIA_RENDER_ORDER.map((code) => (
             <div key={code} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
               <span
@@ -145,8 +145,8 @@ export default function EthiopiaMap({ stats, loading }: EthiopiaMapProps) {
           </div>
         ) : selectedStat ? (
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white">{selectedStat.name}</h4>
+            <div className="flex items-center justify-between gap-2 mb-4">
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white truncate min-w-0">{selectedStat.name}</h4>
               <button
                 onClick={() => setSelectedMapCode(null)}
                 className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"

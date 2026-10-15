@@ -5,6 +5,7 @@ export interface JwtPayload {
   username: string;
   role: UserRole;
   regionalStateId?: string | null;
+  tokenVersion: number;
 }
 
 export interface AuthRequest extends Request {

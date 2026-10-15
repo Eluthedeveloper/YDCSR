@@ -1,0 +1,19 @@
+# YDCS Radio Home - React SPA routing
+# Direct visits to /activity, /login, etc. are served index.html
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Never rewrite real files (js, css, images, logo.png)
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# Do not cache index.html so new deploys are picked up immediately
+<FilesMatch "index\.html$">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </IfModule>
+</FilesMatch>

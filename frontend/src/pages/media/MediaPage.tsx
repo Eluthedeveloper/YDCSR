@@ -173,7 +173,7 @@ export default function MediaPage() {
             <button onClick={() => switchMode('range')} className={`px-3 py-2 text-sm font-medium flex items-center gap-1.5 ${mode === 'range' ? 'bg-primary-600 text-white' : 'text-gray-600 dark:text-gray-400'}`}>Date Range</button>
           </div>
           {mode === 'period' ? (
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <button
                 onClick={() => setPage(p => (totalPages !== null ? Math.min(totalPages, p + 1) : p + 1))}
                 disabled={loading || (totalPages !== null && page >= totalPages)}
@@ -182,11 +182,11 @@ export default function MediaPage() {
               >
                 <ChevronLeft size={20} />
               </button>
-              <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-                <Calendar size={20} className="text-primary-500" />
-                <span className="font-medium text-gray-900 dark:text-white">{headingLabel}</span>
+              <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-3 py-2 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-0 max-w-full">
+                <Calendar size={20} className="text-primary-500 shrink-0" />
+                <span className="font-medium text-gray-900 dark:text-white truncate text-sm">{headingLabel}</span>
                 {totalPages !== null && (
-                  <span className="text-xs text-gray-400">· Page {page} of {totalPages}</span>
+                  <span className="text-xs text-gray-400 whitespace-nowrap">· Page {page} of {totalPages}</span>
                 )}
               </div>
               <button
@@ -199,7 +199,7 @@ export default function MediaPage() {
               </button>
             </div>
           ) : mode === 'month' ? (
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <button onClick={prevMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><ChevronLeft size={20} /></button>
               <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                 <Calendar size={20} className="text-primary-500" />
@@ -216,15 +216,15 @@ export default function MediaPage() {
               <button onClick={nextMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><ChevronRight size={20} /></button>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-gray-500 dark:text-gray-400">From</span>
-              <DatePicker value={startDate} onChange={setStartDate} placeholder="Start date" className="w-44" />
+              <DatePicker value={startDate} onChange={setStartDate} placeholder="Start date" className="w-full sm:w-44" />
               <span className="text-sm text-gray-500 dark:text-gray-400">To</span>
-              <DatePicker value={endDate} onChange={setEndDate} placeholder="End date" className="w-44" />
+              <DatePicker value={endDate} onChange={setEndDate} placeholder="End date" className="w-full sm:w-44" />
             </div>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {canAddMedia && (
             <button onClick={() => setShowUpload(true)} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg flex items-center gap-2">
               <Plus size={20} /> Add Media
@@ -238,13 +238,13 @@ export default function MediaPage() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <span className="px-3 py-1.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-sm font-medium">{photos.length} Photos</span>
         <span className="px-3 py-1.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-sm font-medium">{videos.length} Videos</span>
         <span className="px-3 py-1.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-sm font-medium">{reports.length} PDF Reports</span>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Testimonial Photos & Videos - {headingLabel}
         </h3>
@@ -255,8 +255,8 @@ export default function MediaPage() {
         )}
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <FileText size={20} className="text-primary-500" />
             PDF Reports {headingLabel ? `- ${headingLabel}` : ''}
@@ -273,7 +273,7 @@ export default function MediaPage() {
         ) : (
           <ul className="divide-y divide-gray-100 dark:divide-gray-700">
             {reports.map(r => (
-              <li key={r.id} className="flex items-center justify-between gap-4 py-3">
+              <li key={r.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 py-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 shrink-0">
                     <FileText size={20} />

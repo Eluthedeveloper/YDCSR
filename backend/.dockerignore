@@ -1,0 +1,13 @@
+node_modules
+dist
+.env
+uploads
+backups
+*.log
+.git
+.gitignore
+drizzle.config.ts
+schema.sql
+scripts
+app.js
+ydcdata.csv

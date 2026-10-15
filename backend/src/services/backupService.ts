@@ -12,7 +12,7 @@ let cachedDumpBin: string | null = null;
 
 /**
  * Locates a usable mysqldump binary: explicit MYSQLDUMP_PATH env var first,
- * then PATH, then the usual Windows/XAMPP install locations.
+ * then PATH, then the usual Windows/XAMPP and Linux install locations.
  */
 function resolveMysqldump(): string {
   if (cachedDumpBin) return cachedDumpBin;
@@ -24,6 +24,9 @@ function resolveMysqldump(): string {
     'C:\\xampp\\mysql\\bin\\mysqldump.exe',
     'C:\\wamp64\\bin\\mysql\\mysqldump.exe',
     'C:\\laragon\\bin\\mysql\\mysqldump.exe',
+    '/usr/bin/mysqldump',
+    '/usr/local/bin/mysqldump',
+    '/usr/local/mysql/bin/mysqldump',
   );
   for (const base of ['C:\\Program Files\\MySQL', 'C:\\Program Files (x86)\\MySQL']) {
     try {
@@ -79,7 +82,6 @@ export async function createBackup(trigger: 'auto' | 'manual'): Promise<BackupFi
     '-h', config.db.host,
     '-P', String(config.db.port),
     '-u', config.db.user,
-    ...(config.db.password ? [`-p${config.db.password}`] : []),
     '--no-tablespaces',
     '--single-transaction',
     '--routines',
@@ -88,8 +90,15 @@ export async function createBackup(trigger: 'auto' | 'manual'): Promise<BackupFi
     config.db.name,
   ];
 
+  // Pass the password via MYSQL_PWD, not `-p...` on argv, so it is not exposed
+  // in the process list to other users on the shared host.
+  const env = {
+    ...process.env,
+    ...(config.db.password ? { MYSQL_PWD: config.db.password } : {}),
+  };
+
   await new Promise<void>((resolve, reject) => {
-    const child = spawn(dumpBin, args, { windowsHide: true });
+    const child = spawn(dumpBin, args, { windowsHide: true, env });
     const out = fs.createWriteStream(filePath);
     let stderr = '';
     let streamDone = false;
@@ -108,7 +117,7 @@ export async function createBackup(trigger: 'auto' | 'manual'): Promise<BackupFi
       fs.unlink(filePath, () => {});
       reject(new Error(
         `Could not run mysqldump (${dumpBin}). ${err.message} ` +
-        'Set MYSQLDUMP_PATH in backend/.env to the full mysqldump.exe location.'
+        'Set MYSQLDUMP_PATH in backend/.env to the full mysqldump binary path.'
       ));
     });
     child.on('close', (code) => {

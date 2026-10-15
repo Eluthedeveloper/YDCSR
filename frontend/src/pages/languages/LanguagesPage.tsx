@@ -73,16 +73,16 @@ export default function LanguagesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <p className="text-gray-500 dark:text-gray-400 text-sm">{languages.length} languages configured</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-gray-500 dark:text-gray-400 text-sm flex-1 min-w-[10rem]">{languages.length} languages configured</p>
         {canManage && (
           <button onClick={openCreate} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg flex items-center gap-2"><Plus size={20} /> Add Language</button>
         )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {languages.map(l => (
-          <div key={l.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-3">
+          <div key={l.id} className="bg-white dark:bg-gray-800 rounded-xl p-3 sm:p-4 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-2 sm:gap-3">
             <div className="p-2 bg-primary-50 dark:bg-primary-900/20 rounded-lg shrink-0">
               <Globe size={20} className="text-primary-600 dark:text-primary-400" />
             </div>

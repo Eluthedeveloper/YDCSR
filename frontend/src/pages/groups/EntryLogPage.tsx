@@ -93,7 +93,7 @@ export default function EntryLogPage() {
           <select
             value={clerkId}
             onChange={(e) => { setClerkId(e.target.value); setPage(1); }}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm max-w-full"
           >
             <option value="">All Data Clerks</option>
             {clerks.map(c => <option key={c.id} value={c.id}>{c.fullName}{c.regionalStateName ? ` (${c.regionalStateName})` : ''}</option>)}
@@ -154,7 +154,7 @@ export default function EntryLogPage() {
           </table>
         </div>
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between flex-wrap gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
             <span className="text-sm text-gray-500 dark:text-gray-400">
               Showing {((page - 1) * PER_PAGE) + 1}–{Math.min(page * PER_PAGE, total)} of {total}
             </span>

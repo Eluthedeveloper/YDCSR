@@ -127,7 +127,8 @@ export default function BackupPage() {
             <p>No backups yet. Click "Create Backup Now" or wait for the nightly schedule.</p>
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[540px]">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400">
                 <th className="text-left px-4 py-3 font-medium">File</th>
@@ -163,6 +164,7 @@ export default function BackupPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

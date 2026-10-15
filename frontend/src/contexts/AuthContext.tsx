@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import api from '../services/api';
+import api, { clearSession, getCsrfToken, setCsrfToken } from '../services/api';
 import { UserRole, LoginResponse } from '../types';
 
 interface AuthUser {
@@ -29,39 +29,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      api.get('/auth/profile')
-        .then(({ data }) => {
-          if (data.success) {
-            setUser(data.data);
-          } else {
-            localStorage.clear();
-          }
-        })
-        .catch(() => {
-          localStorage.clear();
-        })
-        .finally(() => setLoading(false));
-    } else {
+    // The access/refresh cookies are httpOnly, so JS cannot read them to detect
+    // a session. The non-httpOnly csrf_token cookie only exists while a session
+    // is active, so its presence tells us whether to try restoring the session.
+    if (!getCsrfToken()) {
       setLoading(false);
+      return;
     }
+
+    api.get('/auth/profile')
+      .then(({ data }) => {
+        if (data.success) {
+          setUser(data.data);
+        } else {
+          clearSession();
+          setUser(null);
+        }
+      })
+      .catch((error) => {
+        // Only drop the session on explicit auth rejection. Transient
+        // failures (backend restarting, network drop) keep the cookie
+        // so a later request can still recover via refresh.
+        const status = (error as { response?: { status?: number } }).response?.status;
+        if (status === 401 || status === 403) {
+          clearSession();
+        }
+        setUser(null);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const login = async (username: string, password: string) => {
     const { data } = await api.post<{ success: boolean; data: LoginResponse }>('/auth/login', { username, password });
-    const { accessToken, refreshToken, user: userData } = data.data;
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
-    setUser(userData);
+    if (!data.success) {
+      throw new Error('Login failed');
+    }
+    setCsrfToken(data.data.csrfToken);
+    setUser(data.data.user);
   };
 
   const logout = () => {
-    const refreshToken = localStorage.getItem('refreshToken');
-    if (refreshToken) {
-      api.post('/auth/logout', { refreshToken }).catch(() => {});
-    }
-    localStorage.clear();
+    api.post('/auth/logout').catch(() => {});
+    clearSession();
     setUser(null);
     window.location.href = '/login';
   };

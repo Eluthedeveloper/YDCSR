@@ -230,7 +230,7 @@ export default function GroupsPage() {
       if (editingGroup) return prev;
       const rs = regionalStates.find(s => s.id === rsId);
       const defaultLang = languages.find(l => l.name === rs?.defaultLanguage);
-      return { ...prev, languageId: defaultLang?.id || '', churchName: '', regionName: '' };
+      return { ...prev, languageId: prev.languageId || (defaultLang?.id || '') };
     });
   };
 
@@ -259,8 +259,8 @@ export default function GroupsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex-1 max-w-md relative">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="w-full sm:w-auto sm:flex-1 sm:max-w-md relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
           <input
             type="text" placeholder="Search by serial, leader, facilitator, church, region, state..."
@@ -270,7 +270,7 @@ export default function GroupsPage() {
           />
         </div>
         {(canImport || canCreate) && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {canImport && (
               <button onClick={() => setShowImport(true)} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2">
                 <Upload size={20} /> Import Excel
@@ -401,7 +401,7 @@ export default function GroupsPage() {
           </table>
         </div>
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between flex-wrap gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
             <span className="text-sm text-gray-500 dark:text-gray-400">
               Showing {((page - 1) * GROUPS_PER_PAGE) + 1}–{Math.min(page * GROUPS_PER_PAGE, total)} of {total}
             </span>

@@ -23,6 +23,57 @@
   }
 }
 
+/* Responsive table: collapses rows into labeled cards below md */
+@media (max-width: 767.98px) {
+  .responsive-table thead {
+    display: none;
+  }
+
+  .responsive-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .responsive-table tr {
+    display: block;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    padding: 0.25rem 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .dark .responsive-table tr {
+    border-color: #374151;
+  }
+
+  .responsive-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    text-align: right;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .responsive-table td::before {
+    content: attr(data-label);
+    font-weight: 500;
+    color: #6b7280;
+    text-align: left;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .dark .responsive-table td::before {
+    color: #9ca3af;
+  }
+
+  .responsive-table td.no-label::before {
+    content: none;
+  }
+}
+
 @keyframes popIn {
   from {
     opacity: 0;

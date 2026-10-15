@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getDb } from './connection';
 import { users, regionalStates, regions, languages, serialSequences } from './schema';
 import { eq, sql } from 'drizzle-orm';
+import { logger } from '../utils/logger';
 
 const defaultRegionalStates = [
   { name: 'Oromia', code: 'OR', defaultLanguage: 'Afan Oromo' },
@@ -60,6 +61,12 @@ export async function seedDefaultData() {
       status: 'active',
     });
     console.log('Default admin user created (admin/admin123)');
+  }
+
+  // Warn loudly while the well-known default password is still in use.
+  const [adminUser] = await db.select().from(users).where(eq(users.username, 'admin')).limit(1);
+  if (adminUser && (await bcrypt.compare('admin123', adminUser.password))) {
+    logger.warn('WARNING: The default admin password (admin / admin123) is still in use. Change it immediately in production.');
   }
 
   for (const lang of defaultLanguages) {

@@ -12,6 +12,7 @@ export const users = mysqlTable('users', {
   role: mysqlEnum('role', ['admin', 'data_entry', 'viewer', 'radio_assistant']).notNull().default('viewer'),
   regionalStateId: varchar('regional_state_id', { length: 36 }),
   status: mysqlEnum('status', ['active', 'inactive']).notNull().default('active'),
+  tokenVersion: int('token_version').notNull().default(0),
   createdAt: datetime('created_at').notNull().default(sql`(now())`),
   updatedAt: datetime('updated_at').notNull().default(sql`(now())`).$onUpdate(() => new Date()),
 }, (table) => ({
@@ -102,6 +103,7 @@ export const radioHomeGroups = mysqlTable('radio_home_groups', {
   churchId: varchar('church_id', { length: 36 }).references(() => churches.id),
   groupLeaderName: varchar('group_leader_name', { length: 255 }),
   groupLeaderPhone: varchar('group_leader_phone', { length: 20 }),
+  groupLeaderPhoneNorm: varchar('group_leader_phone_norm', { length: 30 }),
   facilitatorName: varchar('facilitator_name', { length: 255 }),
   facilitatorPhone: varchar('facilitator_phone', { length: 20 }),
   maleMembers: int('male_members').notNull().default(0),
@@ -124,6 +126,7 @@ export const radioHomeGroups = mysqlTable('radio_home_groups', {
   statusIdx: index('rhg_status_idx').on(table.status),
   leaderIdx: index('rhg_leader_idx').on(table.groupLeaderName),
   facilitatorIdx: index('rhg_facilitator_idx').on(table.facilitatorName),
+  phoneNormIdx: index('rhg_phone_norm_idx').on(table.groupLeaderPhoneNorm),
 }));
 
 // Media table (photos, videos, YouTube links)

@@ -213,15 +213,15 @@ export default function ReportsPage() {
               <button onClick={nextMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><ChevronRight size={20} /></button>
             </>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-gray-500 dark:text-gray-400">From</span>
-              <DatePicker value={startDate} onChange={setStartDate} placeholder="Start date" className="w-44" />
+              <DatePicker value={startDate} onChange={setStartDate} placeholder="Start date" className="w-full sm:w-44" />
               <span className="text-sm text-gray-500 dark:text-gray-400">To</span>
-              <DatePicker value={endDate} onChange={setEndDate} placeholder="End date" className="w-44" />
+              <DatePicker value={endDate} onChange={setEndDate} placeholder="End date" className="w-full sm:w-44" />
             </div>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button onClick={downloadPpt} disabled={mode === 'range'} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"><Download size={16} /> PPT</button>
           {canViewGroups && (
             <button onClick={exportCSV} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700"><Download size={16} /> CSV</button>
@@ -258,11 +258,11 @@ export default function ReportsPage() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Members by Gender</h3>
                   <ResponsiveContainer width="100%" height={250}>
                     <PieChart>
-                      <Pie data={genderData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value" rootTabIndex={-1} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                      <Pie data={genderData} cx="50%" cy="50%" innerRadius="55%" outerRadius="78%" dataKey="value" rootTabIndex={-1} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
                         {genderData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
                       </Pie>
                       <Tooltip />
@@ -270,7 +270,7 @@ export default function ReportsPage() {
                   </ResponsiveContainer>
                 </div>
 
-                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Groups by Regional State</h3>
                   <ResponsiveContainer width="100%" height={250}>
                     <BarChart data={(() => {
@@ -290,7 +290,7 @@ export default function ReportsPage() {
 
               {canViewGroups && (
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                  <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Groups - {months[month-1].label} {year}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">{groups.length} groups found</p>
                 </div>
@@ -333,7 +333,7 @@ export default function ReportsPage() {
                   </table>
                 </div>
                 {groups.length > GROUPS_PER_PAGE && (
-                  <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                  <div className="px-4 sm:px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between flex-wrap gap-2">
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       Showing {((groupPage - 1) * GROUPS_PER_PAGE) + 1}–{Math.min(groupPage * GROUPS_PER_PAGE, groups.length)} of {groups.length}
                     </p>
@@ -361,7 +361,7 @@ export default function ReportsPage() {
 
               {/* Photos & Videos Section */}
               {(photos.length > 0 || allVideos.length > 0) && (
-                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Photos & Videos</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {photos.length > 0 && (

@@ -205,7 +205,8 @@ export default function LoginHistoryPage() {
         {loading ? (
           <TableSkeleton rows={8} cols={6} />
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="responsive-table w-full text-sm">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400">
                 <th className="px-4 py-3 w-10">
@@ -224,10 +225,10 @@ export default function LoginHistoryPage() {
                 <th className="text-right px-4 py-3 font-medium">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody className="md:divide-y md:divide-gray-100 dark:md:divide-gray-700">
               {logs.map(log => (
                 <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                  <td className="px-4 py-3">
+                  <td data-label="Select" className="px-4 py-3">
                     <input
                       type="checkbox"
                       checked={selected.has(log.id)}
@@ -235,28 +236,30 @@ export default function LoginHistoryPage() {
                       className="w-4 h-4 accent-primary-600"
                     />
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap">{formatDate(log.createdAt)}</td>
-                  <td className="px-4 py-3">
-                    <p className="font-medium">{log.userName || 'Unknown'}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">@{log.username}</p>
+                  <td data-label="Date & Time" className="px-4 py-3 whitespace-nowrap">{formatDate(log.createdAt)}</td>
+                  <td data-label="User" className="px-4 py-3">
+                    <div className="text-right md:text-left md:contents">
+                      <p className="font-medium">{log.userName || 'Unknown'}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">@{log.username}</p>
+                    </div>
                   </td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-1.5">
+                  <td data-label="Location" className="px-4 py-3">
+                    <span className="inline-flex items-center gap-1.5 flex-wrap justify-end md:justify-start">
                       {flagEmoji(log.countryCode) && <span className="text-base leading-none">{flagEmoji(log.countryCode)}</span>}
                       <span className="font-medium">{log.country || 'Unknown'}</span>
                       {log.city && <span className="text-xs text-gray-500 dark:text-gray-400">({log.city})</span>}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-mono">{log.ipAddress || '-'}</td>
-                  <td className="px-4 py-3">
+                  <td data-label="IP Address" className="px-4 py-3 font-mono break-all">{log.ipAddress || '-'}</td>
+                  <td data-label="Device" className="px-4 py-3 min-w-0">
                     {log.userAgent ? (
-                      <span className="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                        <Monitor size={14} />
-                        {log.userAgent.length > 60 ? `${log.userAgent.slice(0, 60)}...` : log.userAgent}
+                      <span className="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 max-w-[220px]">
+                        <Monitor size={14} className="shrink-0" />
+                        <span className="truncate">{log.userAgent.length > 60 ? `${log.userAgent.slice(0, 60)}...` : log.userAgent}</span>
                       </span>
                     ) : '-'}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td data-label="Actions" className="px-4 py-3 text-right">
                     <button
                       onClick={() => deleteOne(log.id)}
                       className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
@@ -267,14 +270,15 @@ export default function LoginHistoryPage() {
                   </td>
                 </tr>
               ))}
-              {logs.length === 0 && <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">No logins found</td></tr>}
+              {logs.length === 0 && <tr><td colSpan={7} className="no-label px-4 py-12 text-center text-gray-500 dark:text-gray-400">No logins found</td></tr>}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
       {!loading && totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800">
+        <div className="flex items-center justify-between flex-wrap gap-2 px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800">
           <span className="text-sm text-gray-500 dark:text-gray-400">Page {page} of {totalPages}</span>
           <div className="flex gap-2">
             <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50"><ChevronLeft size={18} /></button>

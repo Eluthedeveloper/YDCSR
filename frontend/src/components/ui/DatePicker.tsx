@@ -98,7 +98,7 @@ export default function DatePicker({
         createPortal(
           <div
             ref={popRef}
-            style={{ position: 'fixed', top: pos.top, left: pos.left, width: POPUP_WIDTH }}
+            style={{ position: 'fixed', top: pos.top, left: pos.left, width: POPUP_WIDTH, maxHeight: 'calc(100vh - 16px)', overflowY: 'auto' }}
             className="z-[70] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-xl p-3 animate-pop"
           >
             {view === 'days' ? (

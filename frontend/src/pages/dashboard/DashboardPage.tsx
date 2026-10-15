@@ -94,10 +94,11 @@ export default function DashboardPage() {
   ];
 
   if (loading) {
+    const statCardCount = hasRole('admin') ? 6 : 5;
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
+          {Array.from({ length: statCardCount }).map((_, i) => <CardSkeleton key={i} />)}
         </div>
       </div>
     );
@@ -111,10 +112,12 @@ export default function DashboardPage() {
         <StatCard title="Female Members" value={stats?.totalFemaleMembers || 0} icon={UserCog} color="bg-pink-500" />
         <StatCard title="Total Members" value={stats?.totalMembers || 0} icon={Users2} color="bg-indigo-500" />
         <StatCard title="Radios Distributed" value={stats?.totalRadios || 0} icon={Radio} color="bg-red-500" />
-        <StatCard title="Viewers" value={stats?.totalViewers || 0} icon={Users} color="bg-rose-500" />
+        {hasRole('admin') && (
+          <StatCard title="Viewers" value={stats?.totalViewers || 0} icon={Users} color="bg-rose-500" />
+        )}
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <MapIcon className="w-5 h-5 text-blue-500" />
@@ -125,12 +128,12 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Groups by Regional State</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={groupsByRegionalState}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="regionalStateName" tick={{ fontSize: 12 }} />
+              <XAxis dataKey="regionalStateName" tick={{ fontSize: 10 }} interval="equidistantPreserveStart" />
               <YAxis />
               <Tooltip />
               <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
@@ -138,11 +141,11 @@ export default function DashboardPage() {
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Members by Gender</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
-              <Pie data={genderData} cx="50%" cy="50%" innerRadius={80} outerRadius={120} dataKey="value" rootTabIndex={-1} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+              <Pie data={genderData} cx="50%" cy="50%" innerRadius="50%" outerRadius="70%" dataKey="value" rootTabIndex={-1} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
                 {genderData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
               </Pie>
               <Tooltip />
@@ -151,7 +154,7 @@ export default function DashboardPage() {
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Monthly Groups Created</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={monthlyData}>
@@ -164,13 +167,13 @@ export default function DashboardPage() {
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Groups by Language</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={groupsByLanguage} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
               <XAxis type="number" />
-              <YAxis dataKey="languageName" type="category" width={100} tick={{ fontSize: 11 }} />
+              <YAxis dataKey="languageName" type="category" width={70} tick={{ fontSize: 10 }} tickFormatter={(v: string) => (v && v.length > 10 ? `${v.slice(0, 9)}…` : v)} />
               <Tooltip />
               <Bar dataKey="count" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
             </BarChart>
@@ -178,7 +181,7 @@ export default function DashboardPage() {
         </div>
 
         {canViewRadioDistribution && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Radio className="w-5 h-5 text-red-500" />
               Radios Distributed by Regional State
@@ -210,7 +213,7 @@ export default function DashboardPage() {
         )}
 
         {canViewRadioDistribution && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <UserCheck className="w-5 h-5 text-cyan-500" />
               Radios Distributed by Facilitator

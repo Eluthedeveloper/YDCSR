@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import { getDb } from '../db/connection';
-import { users, regionalStates, radioHomeGroups, media, reports } from '../db/schema';
+import { users, regionalStates, radioHomeGroups, media, reports, refreshTokens } from '../db/schema';
 import { AppError } from '../middleware/errorHandler';
 import { generateUUID, calculatePagination } from '../utils/helpers';
 import { eq, like, or, and, sql } from 'drizzle-orm';
@@ -113,7 +113,17 @@ export class UserService {
       if (!effectiveState) throw new AppError('Regional state is required for data entry clerks', 400);
     }
 
+    const revokeSessions = Boolean(data.password) || data.status === 'inactive' || Boolean(data.role);
+    if (revokeSessions) {
+      updateData.tokenVersion = sql`${users.tokenVersion} + 1`;
+    }
+
     await db.update(users).set(updateData).where(eq(users.id, id));
+
+    if (revokeSessions) {
+      await db.delete(refreshTokens).where(eq(refreshTokens.userId, id));
+    }
+
     return this.getById(id);
   }
 

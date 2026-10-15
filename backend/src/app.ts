@@ -1,15 +1,20 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import fs from 'fs';
 import swaggerUi from 'swagger-ui-express';
+
 import { config } from './config';
 import { swaggerSpec } from './swagger';
+import { getPool } from './db/connection';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { upload, verifyFileSignature } from './middleware/upload';
 import { authenticate, authorize } from './middleware/auth';
+import { csrfProtect } from './middleware/csrf';
+
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import regionRoutes from './routes/regions';
@@ -28,67 +33,202 @@ const app = express();
 
 app.set('trust proxy', 1);
 
+/* =========================================================
+   CREATE REQUIRED DIRECTORIES
+========================================================= */
+
 if (!fs.existsSync(config.upload.dir)) {
   fs.mkdirSync(config.upload.dir, { recursive: true });
 }
+
 const reportsDir = path.join(config.upload.dir, 'reports');
+
 if (!fs.existsSync(reportsDir)) {
   fs.mkdirSync(reportsDir, { recursive: true });
 }
 
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(cors({ origin: config.cors.origin, credentials: true }));
+/* =========================================================
+   SECURITY MIDDLEWARE
+========================================================= */
+
+app.use(
+  helmet({
+    crossOriginResourcePolicy: {
+      policy: 'cross-origin',
+    },
+  })
+);
+
+app.use(
+  cors({
+    origin: config.cors.origin,
+    credentials: true,
+  })
+);
+
+/* =========================================================
+   BODY PARSING
+========================================================= */
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', (req, res, next) => {
-  // Reports (and any other sensitive files) must only be served through the
-  // authenticated /api/reports/:id/download endpoint, never via static files.
-  if (req.path.startsWith('/reports/')) {
-    return res.status(404).json({ success: false, message: 'Not found' });
-  }
-  next();
-}, express.static(path.join(process.cwd(), config.upload.dir), { dotfiles: 'ignore', index: false }));
+app.use(cookieParser());
+
+/* =========================================================
+   STATIC UPLOAD FILES
+========================================================= */
+
+app.use(
+  '/uploads',
+  (req, res, next) => {
+    // Sensitive reports must never be served directly.
+    // They must be downloaded through the authenticated
+    // /api/reports/:id/download endpoint.
+    if (req.path.startsWith('/reports/')) {
+      return res.status(404).json({
+        success: false,
+        message: 'Not found',
+      });
+    }
+
+    next();
+  },
+  express.static(path.join(process.cwd(), config.upload.dir), {
+    dotfiles: 'ignore',
+    index: false,
+  })
+);
+
+/* =========================================================
+   GENERAL API RATE LIMIT
+========================================================= */
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 500,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: 'Too many requests, please try again later.' },
+  message: {
+    success: false,
+    message: 'Too many requests, please try again later.',
+  },
 });
+
 app.use('/api', limiter);
 
-// Strict brute-force protection on credential endpoints.
+/* =========================================================
+   LOGIN RATE LIMIT
+========================================================= */
+
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true,
-  message: { success: false, message: 'Too many login attempts. Please try again in 15 minutes.' },
+  message: {
+    success: false,
+    message:
+      'Too many login attempts. Please try again in 15 minutes.',
+  },
 });
-app.use('/api/auth/login', loginLimiter);
-app.use('/api/auth/refresh', rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, message: 'Too many requests. Please try again later.' },
-}));
 
-// Swagger UI is only exposed outside production unless explicitly enabled via ENABLE_SWAGGER=true.
-const swaggerEnabled = ['development', 'test'].includes(config.nodeEnv) || process.env.ENABLE_SWAGGER === 'true';
+app.use('/api/auth/login', loginLimiter);
+
+/* =========================================================
+   REFRESH TOKEN RATE LIMIT
+========================================================= */
+
+app.use(
+  '/api/auth/refresh',
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      success: false,
+      message: 'Too many requests. Please try again later.',
+    },
+  })
+);
+
+/* =========================================================
+   CSRF PROTECTION (cookie-authenticated browser requests)
+========================================================= */
+
+app.use('/api', csrfProtect);
+
+/* =========================================================
+   SWAGGER
+========================================================= */
+
+const swaggerEnabled =
+  ['development', 'test'].includes(config.nodeEnv) ||
+  process.env.ENABLE_SWAGGER === 'true';
+
 if (swaggerEnabled) {
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  app.use(
+    '/api-docs',
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerSpec)
+  );
 } else {
   app.get('/api-docs', (_req, res) => {
-    res.status(404).json({ success: false, message: 'Not found' });
+    res.status(404).json({
+      success: false,
+      message: 'Not found',
+    });
   });
 }
 
-app.get('/api/health', (_req, res) => {
-  res.json({ success: true, message: 'YDCS API is running', timestamp: new Date().toISOString() });
+/* =========================================================
+   HEALTH CHECK
+========================================================= */
+
+app.get('/', (_req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'YDCS Radio Backend is up and running!',
+    status: 'online',
+    environment: config.nodeEnv,
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/api/health',
+      apiDocs: '/api-docs',
+    },
+  });
 });
+
+app.get('/api/health', async (_req, res) => {
+  let dbStatus = 'disconnected';
+  let dbError: string | null = null;
+
+  try {
+    const pool = getPool();
+    await pool.query('SELECT 1');
+    dbStatus = 'connected';
+  } catch {
+    // Never leak connection details/credentials through the public health endpoint.
+    dbError = 'Database connection check failed';
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'YDCS API is running',
+    status: 'online',
+    database: dbStatus,
+    ...(dbError ? { dbError } : {}),
+    environment: config.nodeEnv,
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+/* =========================================================
+   API ROUTES
+========================================================= */
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -104,18 +244,54 @@ app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/backups', backupRoutes);
 
-// File upload endpoint
-app.post('/api/upload', authenticate, authorize('admin', 'radio_assistant'), upload.single('file'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ success: false, message: 'No file uploaded' });
+/* =========================================================
+   FILE UPLOAD
+========================================================= */
+
+app.post(
+  '/api/upload',
+  authenticate,
+  authorize('admin', 'radio_assistant'),
+  upload.single('file'),
+  (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded',
+      });
+    }
+
+    if (
+      !verifyFileSignature(
+        req.file.path,
+        req.file.mimetype
+      )
+    ) {
+      fs.unlinkSync(req.file.path);
+
+      return res.status(400).json({
+        success: false,
+        message:
+          'File content does not match its declared type',
+      });
+    }
+
+    const url = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        url,
+        filename: req.file.filename,
+        mimetype: req.file.mimetype,
+      },
+    });
   }
-  if (!verifyFileSignature(req.file.path, req.file.mimetype)) {
-    fs.unlinkSync(req.file.path);
-    return res.status(400).json({ success: false, message: 'File content does not match its declared type' });
-  }
-  const url = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-  res.json({ success: true, data: { url, filename: req.file.filename, mimetype: req.file.mimetype } });
-});
+);
+
+/* =========================================================
+   ERROR HANDLERS
+========================================================= */
 
 app.use(notFoundHandler);
 app.use(errorHandler);

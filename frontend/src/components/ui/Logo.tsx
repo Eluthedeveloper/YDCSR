@@ -7,10 +7,9 @@ interface LogoProps {
 }
 
 /**
- * App logo. Renders the placeholder /logo.svg from the public folder.
- * To use your real logo later, replace frontend/public/logo.svg
- * (or drop logo.png and change `src` below). If the file is
- * missing, a gradient radio-icon badge is shown instead.
+ * App logo. Renders /logo.png from the public folder.
+ * To swap the logo later, replace frontend/public/logo.png.
+ * If the file is missing, a gradient radio-icon badge is shown instead.
  */
 export default function Logo({ size = 40, className = '' }: LogoProps) {
   const [failed, setFailed] = useState(false);
@@ -28,7 +27,7 @@ export default function Logo({ size = 40, className = '' }: LogoProps) {
 
   return (
     <img
-      src="/logo.svg"
+      src="/logo.png"
       alt="Logo"
       width={size}
       height={size}

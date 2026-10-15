@@ -4,6 +4,11 @@ import { createBackup, pruneOldBackups } from '../services/backupService';
 import { logger } from '../utils/logger';
 
 export function startBackupJob() {
+  const schedule = config.backup.cron.trim().toLowerCase();
+  if (!schedule || schedule === 'off' || schedule === 'disabled') {
+    logger.info('Database backup cron disabled (set BACKUP_CRON to a schedule to enable)');
+    return;
+  }
   cron.schedule(config.backup.cron, async () => {
     try {
       await createBackup('auto');

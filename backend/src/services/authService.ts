@@ -1,7 +1,8 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-import { getDb } from '../db/connection';
+import { createHash, randomBytes } from 'crypto';
+import { getDb, getPool } from '../db/connection';
 import { users, regionalStates, refreshTokens, auditLogs } from '../db/schema';
 import { config } from '../config';
 import { JwtPayload } from '../types';
@@ -10,6 +11,14 @@ import { generateUUID } from '../utils/helpers';
 import { resolveGeo } from '../utils/geo';
 import { settingsService } from './settingsService';
 import { eq } from 'drizzle-orm';
+
+// Only the SHA-256 hash of a refresh token is persisted, so a database leak
+// does not expose usable bearer tokens. The raw token is the 7-day credential.
+function hashToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
+
+const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export class AuthService {
   async login(username: string, password: string, context?: { ipAddress?: string; userAgent?: string }) {
@@ -29,15 +38,17 @@ export class AuthService {
       throw new AppError('Invalid username or password', 401);
     }
 
-    const payload: JwtPayload = { userId: user.id, username: user.username, role: user.role, regionalStateId: user.regionalStateId ?? null };
+    const payload: JwtPayload = { userId: user.id, username: user.username, role: user.role, regionalStateId: user.regionalStateId ?? null, tokenVersion: user.tokenVersion };
     const accessToken = this.generateToken(payload);
     const refreshToken = uuidv4();
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
+    const csrfToken = randomBytes(32).toString('hex');
 
     await db.insert(refreshTokens).values({
       id: uuidv4(),
       userId: user.id,
-      token: refreshToken,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      token: hashToken(refreshToken),
+      expiresAt,
     });
 
     const ipAddress = context?.ipAddress || null;
@@ -78,33 +89,58 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
+      csrfToken,
       user: { id: user.id, fullName: user.fullName, username: user.username, role: user.role, phone: user.phone, email: user.email, regionalStateId: user.regionalStateId ?? null, regionalStateName },
     };
   }
 
   async refresh(token: string) {
     const db = getDb();
-    const [stored] = await db.select().from(refreshTokens).where(eq(refreshTokens.token, token)).limit(1);
+    const hash = hashToken(token);
+
+    const [stored] = await db.select().from(refreshTokens).where(eq(refreshTokens.token, hash)).limit(1);
     if (!stored) throw new AppError('Invalid refresh token', 401);
-    if (new Date(stored.expiresAt) < new Date()) throw new AppError('Refresh token expired', 401);
+    if (new Date(stored.expiresAt) < new Date()) {
+      await db.delete(refreshTokens).where(eq(refreshTokens.id, stored.id));
+      throw new AppError('Refresh token expired', 401);
+    }
 
     const [user] = await db.select().from(users).where(eq(users.id, stored.userId)).limit(1);
-    if (!user || user.status !== 'active') throw new AppError('User not found or inactive', 401);
+    if (!user || user.status !== 'active') {
+      await db.delete(refreshTokens).where(eq(refreshTokens.id, stored.id));
+      throw new AppError('User not found or inactive', 401);
+    }
 
-    const payload: JwtPayload = { userId: user.id, username: user.username, role: user.role, regionalStateId: user.regionalStateId ?? null };
+    const payload: JwtPayload = { userId: user.id, username: user.username, role: user.role, regionalStateId: user.regionalStateId ?? null, tokenVersion: user.tokenVersion };
     const accessToken = this.generateToken(payload);
     const newRefreshToken = uuidv4();
+    const newHash = hashToken(newRefreshToken);
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
 
-    await db.update(refreshTokens)
-      .set({ token: newRefreshToken, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) })
-      .where(eq(refreshTokens.id, stored.id));
+    // Atomic rotation: the UPDATE takes a row lock on the matching row, so two
+    // concurrent refreshes with the same token cannot both succeed - the second
+    // matches 0 rows and is rejected (reuse detection).
+    const conn = await getPool().getConnection();
+    try {
+      const [result] = await conn.execute(
+        'UPDATE refresh_tokens SET token = ?, expires_at = ? WHERE id = ? AND token = ?',
+        [newHash, expiresAt, stored.id, hash]
+      );
+      const affectedRows = (result as { affectedRows?: number }).affectedRows ?? 0;
+      if (affectedRows !== 1) {
+        throw new AppError('Invalid refresh token', 401);
+      }
+    } finally {
+      conn.release();
+    }
 
-    return { accessToken, refreshToken: newRefreshToken };
+    const csrfToken = randomBytes(32).toString('hex');
+    return { accessToken, refreshToken: newRefreshToken, csrfToken };
   }
 
   async logout(token: string) {
     const db = getDb();
-    await db.delete(refreshTokens).where(eq(refreshTokens.token, token));
+    await db.delete(refreshTokens).where(eq(refreshTokens.token, hashToken(token)));
   }
 
   async getProfile(userId: string) {

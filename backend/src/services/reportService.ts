@@ -62,7 +62,8 @@ export class ReportService {
       createdAt: reports.createdAt,
     }).from(reports)
       .where(conditions.length ? and(...conditions) : undefined)
-      .orderBy(desc(reports.reportDate));
+      .orderBy(desc(reports.reportDate))
+      .limit(1000);
   }
 
   async getById(id: string) {

@@ -1,20 +1,61 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import axios from 'axios';
+
+import type { AxiosError, InternalAxiosRequestConfig } from 'axios';
+
+// Local dev uses the Vite proxy (/api) so cookies stay same-origin; production
+// talks to the API host directly with its credentials-mode cookies.
+const BASE_URL =
+  (import.meta.env.VITE_API_URL as string | undefined) ||
+  '/api';
+
+export const getCookie = (name: string): string | null => {
+  const match = document.cookie.match(new RegExp('(?:^|;\\s*)' + name + '=([^;]*)'));
+  return match ? decodeURIComponent(match[1]) : null;
+};
+
+export const getSessionToken = (): string => getCookie('access_token') ?? '';
+
+export const getRefreshToken = (): string =>
+  getCookie('refresh_token') ?? localStorage.getItem('refresh_token') ?? '';
+
+export const getCsrfToken = (): string =>
+  getCookie('csrf_token') ?? sessionStorage.getItem('csrf_token') ?? '';
+
+export const setCsrfToken = (token: string) => {
+  if (token) sessionStorage.setItem('csrf_token', token);
+};
+
+export const clearSession = () => {
+  sessionStorage.removeItem('csrf_token');
+};
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: BASE_URL,
+  withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 });
 
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = localStorage.getItem('accessToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
-    delete config.headers['Content-Type'];
-  }
-  return config;
-});
+api.interceptors.request.use(
+  (config) => {
+    const token = getSessionToken();
+    if (token) config.headers.set('Authorization', `Bearer ${token}`);
+    const method = (config.method || 'get').toLowerCase();
+    if (
+      method !== 'get' &&
+      method !== 'head' &&
+      method !== 'options' &&
+      !config.headers.has('X-CSRF-Token')
+    ) {
+      const csrf = getCsrfToken();
+      if (csrf) config.headers.set('X-CSRF-Token', csrf);
+    }
+    if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+      config.headers.delete('Content-Type');
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 let isRefreshing = false;
 let failedQueue: Array<{ resolve: (value: unknown) => void; reject: (reason: unknown) => void }> = [];
@@ -30,21 +71,40 @@ const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue = [];
 };
 
+const redirectToLogin = () => {
+  clearSession();
+  const go = () => {
+    window.location.href = '/login';
+  };
+  // A revoked/expired session must also clear the auth cookies server-side
+  // (especially the readable csrf_token). If they survive, the next page load
+  // re-detects a session, 401s, and bounces back here in an infinite loop.
+  if (getCsrfToken()) {
+    api.post('/auth/logout').catch(() => {}).finally(go);
+    setTimeout(go, 1500);
+    return;
+  }
+  go();
+};
+
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
     const isLoginRequest = originalRequest.url?.includes('/auth/login');
-    const hasToken = !!localStorage.getItem('refreshToken');
+    // The access/refresh cookies are httpOnly so JS can't read them; the
+    // non-httpOnly csrf_token (cookie or sessionStorage) is the only
+    // JS-readable marker that a session exists.
+    const hasSession = !!getCsrfToken();
 
     // A 401 on the login endpoint means bad credentials, not an expired token.
-    if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest && hasToken) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest && hasSession) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         }).then((token) => {
-          originalRequest.headers.Authorization = `Bearer ${token}`;
+          originalRequest.headers.set('Authorization', `Bearer ${token}`);
           return api(originalRequest);
         });
       }
@@ -52,25 +112,23 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (!refreshToken) {
-        localStorage.clear();
-        window.location.href = '/login';
-        return Promise.reject(error);
-      }
-
       try {
-        const { data } = await axios.post('/api/auth/refresh', { refreshToken });
-        const newToken = data.data.accessToken;
-        localStorage.setItem('accessToken', newToken);
-        localStorage.setItem('refreshToken', data.data.refreshToken);
+        // The httpOnly refresh cookie authenticates this call; no token body needed.
+        const { data } = await axios.post(
+          `${api.defaults.baseURL}/auth/refresh`,
+          undefined,
+          { withCredentials: true }
+        );
+        const newToken = data?.data?.accessToken as string | undefined;
+        if (!newToken) throw new Error('Refresh failed');
+
+        if (data?.data?.csrfToken) setCsrfToken(data.data.csrfToken);
         processQueue(null, newToken);
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        originalRequest.headers.set('Authorization', `Bearer ${newToken}`);
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        localStorage.clear();
-        window.location.href = '/login';
+        redirectToLogin();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

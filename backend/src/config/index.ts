@@ -39,9 +39,15 @@ export const config = {
   cors: {
     origin: (process.env.CORS_ORIGIN || 'http://localhost:5173').split(',').map((s) => s.trim()).filter(Boolean),
   },
-  redis: {
-    url: process.env.REDIS_URL || '',
-    enabled: process.env.REDIS_ENABLED === 'true',
-    ttl: Number(process.env.REDIS_TTL_SECONDS) || 60,
+  // Cookie hardening for the httpOnly auth flow.
+  // SameSite=None requires Secure, so production cookies are Secure + None so
+  // the browser forwards them from the SPA origin to the API origin. If the SPA
+  // and the API live on the same registrable domain (e.g. app.example.com and
+  // api.example.com), set COOKIE_DOMAIN=.example.com so the frontend can read
+  // the non-httpOnly csrf_token cookie for the double-submit CSRF header.
+  cookie: {
+    secure: nodeEnv === 'production',
+    sameSite: (nodeEnv === 'production' ? 'none' : 'lax') as 'none' | 'lax' | 'strict',
+    domain: (process.env.COOKIE_DOMAIN || '').trim(),
   },
 };
