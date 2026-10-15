@@ -34,14 +34,18 @@ export default function Layout() {
         <main className="flex-1 p-4 sm:p-6 overflow-y-auto">
           <Outlet />
         </main>
-        <footer className="shrink-0 py-4 px-6 border-t border-gray-200 dark:border-gray-800">
-          <div className="flex items-center justify-center text-sm">
-            <span className="text-gray-400 dark:text-gray-500">Developed by </span>
+        <footer className="shrink-0 px-6 pt-6 pb-5 border-t border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm">
+          <div className="flex flex-col items-center justify-center gap-1.5 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="h-px w-8 bg-gradient-to-r from-transparent to-primary-400/60 dark:to-primary-500/50" />
+              <span className="tracking-wide text-gray-500 dark:text-gray-400">Developed by</span>
+              <span className="h-px w-8 bg-gradient-to-l from-transparent to-primary-400/60 dark:to-primary-500/50" />
+            </div>
             <a
               href="https://yemisrachdimts.org"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+              className="font-semibold bg-gradient-to-r from-primary-600 to-primary-500 dark:from-primary-400 dark:to-primary-300 bg-clip-text text-transparent hover:from-primary-700 hover:to-primary-600 dark:hover:from-primary-300 dark:hover:to-primary-200 transition-all duration-300"
             >
               Eliyas Daba
             </a>
